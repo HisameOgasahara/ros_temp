@@ -12,7 +12,7 @@ def gstreamer_pipeline(
     display_width=1280,
     display_height=720,
     framerate=30,
-    flip_method=0,    
+    flip_method=2, #상하좌우 반전. 2는 180도 회전, 1은 90도 회전    
 ):
     return (
         "nvarguscamerasrc sensor-id=%d ! " 
