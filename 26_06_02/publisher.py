@@ -121,7 +121,7 @@ def main():
 
                 cv2.rectangle(img_bgr, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
                 
-                cv2.putText(img_bgr, label, (xmin, max(ymin - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(img_bgr, label, (xmin, max(ymin - 10,0)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 
                 result.append({"class": class_name, "confidence": conf,
                     "xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax,})
@@ -130,7 +130,7 @@ def main():
             result_msg.data = json.dumps(result)
             node.result_pub.publish(result_msg)
 
-        _, jpg = cv2.imencode('.jpg', img_bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        _, jpg = cv2.imencode('.jpg', img_bgr, [cv2.IMWRITE_JPEG_QUALITY, 40])
         img_msg = CompressedImage()
         img_msg.header.stamp = node.get_clock().now().to_msg()
         img_msg.format = 'jpeg'
