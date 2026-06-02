@@ -69,7 +69,7 @@ def main():
     #---------------------------------
     # Jetson Inference Init
     #---------------------------------
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = "/home/jetson/turtlebot3_ws/src/camera_ros/camera_ros/"
     model_path = os.path.join(base_dir, 'ssd-mobilenet.onnx')
     labels_path = os.path.join(base_dir, 'labels.txt')
 
