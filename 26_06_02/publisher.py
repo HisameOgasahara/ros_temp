@@ -38,7 +38,7 @@ class CSIVideoPublisher(Node):
     def __init__(self):
         super().__init__('csi_video_publisher')
         
-        self.publisher_ = self.create_publisher(
+        self.publisher = self.create_publisher(
             CompressedImage, 'camera', 5
         )
 
