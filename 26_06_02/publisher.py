@@ -72,7 +72,7 @@ class CSIVideoPublisher(Node):
         msg.format = "jpeg"
         msg.data = jpg.tobytes()
 
-        self.publish.publish(msg)
+        self.publisher.publish(msg)
 
 def main():
     rclpy.init()
