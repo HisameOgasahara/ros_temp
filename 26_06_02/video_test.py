@@ -25,7 +25,7 @@ class VideoTest(Node):
             return
         
         cv2.imshow('video', src)
-        if cv2.waitkey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
             self.destroy_node()
             rclpy.shutdown()
