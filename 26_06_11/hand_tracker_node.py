@@ -93,13 +93,13 @@ class HandTrackerNode(Node):
         if self.thumbs_up_count >= 5:
             motion_id = 0
             if self.item == "pen":
-                motion_id = 6
+                motion_id = 4
             elif self.item == "driver":
-                motion_id = 7
+                motion_id = 3
             elif self.item == "block":
-                motion_id = 8
+                motion_id = 1
             elif self.item == "wrench":
-                motion_id = 9
+                motion_id = 2
             self.manipulator_pub.publish(Int32(data=motion_id))
             self.get_logger().info("Stopping mediaPipe...")
             self.mediapipe_start = False
