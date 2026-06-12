@@ -1,5 +1,7 @@
-#!/usr/bin/env python3
+#!/home/jetson/mp_env/bin/python3
 
+import sys
+sys.path.append('/home/jetson/mp_env/lib/python3.8/site-packages')
 import json
 import rclpy
 from rclpy.node import Node
@@ -50,8 +52,6 @@ class HandTrackerNode(Node):
             min_tracking_confidence=0.5
         )
         self.mediapipe_start = False
-        # Practice values used on Jetson:
-        # sys.path.append('/home/jetson/mp_env/lib/python3.8/site-packages')
         self.motion_map = json.loads(
             self.get_parameter(
                 'motion_map_json'
