@@ -8,15 +8,21 @@ browser can verify basic network connectivity.
 """
 
 import asyncio
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import socket
 import subprocess
 import sys
+from pathlib import Path
+from threading import Thread
 
 import websockets
 
 
 HOST = "0.0.0.0"
-PORT = 3000
+WS_PORT = 3000
+HTTP_PORT = 8000
+THIS_DIR = Path(__file__).resolve().parent
 
 
 def print_python_info():
@@ -34,16 +40,18 @@ def print_python_info():
 def print_startup_diagnostics():
     print("physical device: Jetson Nano")
     print_python_info()
-    print(f"listening target: ws://{HOST}:{PORT}")
-    print("phone target should be: ws://<JETSON_HOTSPOT_IP>:3000")
+    print(f"WebSocket target: ws://{HOST}:{WS_PORT}")
+    print(f"HTTP test page: http://{HOST}:{HTTP_PORT}/phone_ws_client.html")
+    print("phone should open: http://<JETSON_HOTSPOT_IP>:8000/phone_ws_client.html")
+    print("phone WebSocket target should be: ws://<JETSON_HOTSPOT_IP>:3000")
 
     print_detected_ips()
 
     print("")
     print("If the phone cannot connect, check on Jetson:")
     print("  hostname -I")
-    print("  ss -ltnp | grep 3000")
-    print("Expected listener: 0.0.0.0:3000")
+    print("  ss -ltnp | grep -E '3000|8000'")
+    print("Expected listeners: 0.0.0.0:3000 and 0.0.0.0:8000")
     print("")
 
 
@@ -84,19 +92,20 @@ def print_detected_ips():
 
 
 def check_port_available():
-    print(f"Port {PORT} bind check:")
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    for port in (WS_PORT, HTTP_PORT):
+        print(f"Port {port} bind check:")
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    try:
-        sock.bind((HOST, PORT))
-        print(f"OK: port {PORT} is available.")
-    except OSError as exc:
-        print(f"Port {PORT} is not available:", exc)
-        print("Another process may already be using it.")
-        print("Check with: ss -ltnp | grep 3000")
-    finally:
-        sock.close()
+        try:
+            sock.bind((HOST, port))
+            print(f"OK: port {port} is available.")
+        except OSError as exc:
+            print(f"Port {port} is not available:", exc)
+            print("Another process may already be using it.")
+            print("Check with: ss -ltnp | grep -E '3000|8000'")
+        finally:
+            sock.close()
 
 
 def run_diagnose_only():
@@ -118,9 +127,19 @@ async def handler(websocket):
         await websocket.send("echo: " + message)
 
 
+def start_http_server():
+    handler_class = partial(SimpleHTTPRequestHandler, directory=str(THIS_DIR))
+    httpd = ThreadingHTTPServer((HOST, HTTP_PORT), handler_class)
+    print(f"HTTP server is ready on http://{HOST}:{HTTP_PORT}/phone_ws_client.html")
+    httpd.serve_forever()
+
+
 async def main():
     print_startup_diagnostics()
-    async with websockets.serve(handler, HOST, PORT):
+    http_thread = Thread(target=start_http_server, daemon=True)
+    http_thread.start()
+
+    async with websockets.serve(handler, HOST, WS_PORT):
         print("WebSocket server is ready.")
         await asyncio.Future()
 

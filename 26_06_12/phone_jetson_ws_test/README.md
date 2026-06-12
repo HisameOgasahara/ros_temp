@@ -11,11 +11,20 @@ python3 -m pip install websockets
 python3 ws_echo_server_jetson.py
 ```
 
-정상 실행되면 `ws://0.0.0.0:3000`에서 대기합니다.
+정상 실행되면 아래 두 서버가 같이 열립니다.
+
+```text
+WebSocket: ws://0.0.0.0:3000
+HTML page: http://0.0.0.0:8000/phone_ws_client.html
+```
 
 ## 2. 핸드폰에서 열기
 
-핸드폰 브라우저에서 `phone_ws_client.html`을 열고 `Send Test Message` 버튼을 누릅니다.
+핸드폰 브라우저에서 아래 주소로 들어가고 `Send Test Message` 버튼을 누릅니다.
+
+```text
+http://10.59.121.144:8000/phone_ws_client.html
+```
 
 현재 기본 접속 주소:
 
@@ -45,13 +54,13 @@ Jetson에서 현재 IP 확인:
 hostname -I
 ```
 
-Jetson에서 3000번 포트가 열렸는지 확인:
+Jetson에서 3000번/8000번 포트가 열렸는지 확인:
 
 ```bash
-ss -ltnp | grep 3000
+ss -ltnp | grep -E '3000|8000'
 ```
 
-`0.0.0.0:3000`으로 떠야 핸드폰에서 접속할 수 있습니다.
+`0.0.0.0:3000`과 `0.0.0.0:8000`으로 떠야 핸드폰에서 접속할 수 있습니다.
 
 핸드폰 HTML은 연결 실패 시 다음 정보를 화면에 출력합니다.
 

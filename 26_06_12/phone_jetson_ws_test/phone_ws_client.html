@@ -40,7 +40,10 @@ and the Jetson Nano is connected to that hotspot.
 
     <script>
         // Physical target: Jetson Nano IP on the phone hotspot Wi-Fi.
-        const WS_URL = "ws://10.59.121.144:3000";
+        const DEFAULT_WS_URL = "ws://10.59.121.144:3000";
+        const WS_URL = location.protocol.startsWith("http")
+            ? "ws://" + location.hostname + ":3000"
+            : DEFAULT_WS_URL;
         const CONNECT_TIMEOUT_MS = 5000;
         const logEl = document.getElementById("log");
         const targetEl = document.getElementById("target");
@@ -67,7 +70,8 @@ and the Jetson Nano is connected to that hotspot.
                     log("diagnosis: connection timeout after " + CONNECT_TIMEOUT_MS + " ms");
                     log("check 1: Jetson IP is still 10.59.121.144");
                     log("check 2: Jetson server is running on 0.0.0.0:3000");
-                    log("check 3: phone hotspot allows phone-to-Jetson traffic");
+                    log("check 3: try opening http://10.59.121.144:8000/phone_ws_client.html");
+                    log("check 4: phone hotspot allows phone-to-Jetson traffic");
                 }
             }, CONNECT_TIMEOUT_MS);
 
