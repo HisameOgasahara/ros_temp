@@ -202,6 +202,13 @@ def print_detected_ips():
     stdout, stderr = run_command(["hostname", "-I"])
     if stdout:
         print("hostname -I:", stdout)
+        first_ipv4 = next((part for part in stdout.split() if "." in part), None)
+        if first_ipv4:
+            print("")
+            print("Use this on the phone browser:")
+            print(f"  http://{first_ipv4}:{HTTP_PORT}/phone_ws_client.html")
+            print("This page will connect WebSocket to:")
+            print(f"  ws://{first_ipv4}:{WS_PORT}")
     elif stderr:
         print("hostname -I error:", stderr)
 
