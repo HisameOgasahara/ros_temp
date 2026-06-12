@@ -9,6 +9,7 @@ browser can verify basic network connectivity.
 
 import asyncio
 import socket
+import subprocess
 import sys
 
 import websockets
@@ -36,13 +37,7 @@ def print_startup_diagnostics():
     print(f"listening target: ws://{HOST}:{PORT}")
     print("phone target should be: ws://<JETSON_HOTSPOT_IP>:3000")
 
-    try:
-        hostname = socket.gethostname()
-        print("hostname:", hostname)
-        for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
-            print("detected IPv4:", info[4][0])
-    except Exception as exc:
-        print("could not inspect local IP addresses:", exc)
+    print_detected_ips()
 
     print("")
     print("If the phone cannot connect, check on Jetson:")
@@ -50,6 +45,42 @@ def print_startup_diagnostics():
     print("  ss -ltnp | grep 3000")
     print("Expected listener: 0.0.0.0:3000")
     print("")
+
+
+def run_command(command):
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except Exception as exc:
+        return "", str(exc)
+
+    return completed.stdout.strip(), completed.stderr.strip()
+
+
+def print_detected_ips():
+    try:
+        print("hostname:", socket.gethostname())
+    except Exception as exc:
+        print("hostname lookup failed:", exc)
+
+    stdout, stderr = run_command(["hostname", "-I"])
+    if stdout:
+        print("hostname -I:", stdout)
+    elif stderr:
+        print("hostname -I error:", stderr)
+
+    stdout, stderr = run_command(["ip", "-4", "addr", "show"])
+    if stdout:
+        print("")
+        print("ip -4 addr show:")
+        print(stdout)
+    elif stderr:
+        print("ip -4 addr show error:", stderr)
 
 
 def check_port_available():
