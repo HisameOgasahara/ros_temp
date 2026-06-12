@@ -23,6 +23,121 @@ HOST = "0.0.0.0"
 WS_PORT = 3000
 HTTP_PORT = 8000
 THIS_DIR = Path(__file__).resolve().parent
+HTML_FILE = THIS_DIR / "phone_ws_client.html"
+
+HTML_TEMPLATE = """<!doctype html>
+<!--
+Physical device: Phone
+
+Open this page from the phone browser:
+http://<JETSON_HOTSPOT_IP>:8000/phone_ws_client.html
+-->
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phone-Jetson WebSocket Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 24px;
+            line-height: 1.5;
+        }
+
+        button {
+            padding: 12px 16px;
+            font-size: 16px;
+        }
+
+        pre {
+            margin-top: 16px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            background: #f7f7f7;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Phone-Jetson WebSocket Test</h1>
+    <p>Target: <code id="target"></code></p>
+    <button type="button" onclick="sendTestMessage()">Send Test Message</button>
+    <button type="button" onclick="reconnect()">Reconnect</button>
+    <pre id="log"></pre>
+
+    <script>
+        const DEFAULT_WS_URL = "ws://10.59.121.144:3000";
+        const WS_URL = location.protocol.startsWith("http")
+            ? "ws://" + location.hostname + ":3000"
+            : DEFAULT_WS_URL;
+        const CONNECT_TIMEOUT_MS = 5000;
+        const logEl = document.getElementById("log");
+        const targetEl = document.getElementById("target");
+        let ws = null;
+        let connectTimer = null;
+
+        targetEl.textContent = WS_URL;
+
+        function log(message) {
+            const now = new Date().toLocaleTimeString();
+            logEl.textContent += "[" + now + "] " + message + "\\n";
+        }
+
+        function connect() {
+            clearTimeout(connectTimer);
+            log("connecting: " + WS_URL);
+            log("phone online: " + navigator.onLine);
+            log("page origin: " + location.origin);
+
+            ws = new WebSocket(WS_URL);
+
+            connectTimer = setTimeout(() => {
+                if (ws && ws.readyState !== WebSocket.OPEN) {
+                    log("diagnosis: connection timeout after " + CONNECT_TIMEOUT_MS + " ms");
+                    log("check 1: Jetson IP in browser URL is correct");
+                    log("check 2: Jetson server is running on 0.0.0.0:3000");
+                    log("check 3: phone hotspot allows phone-to-Jetson traffic");
+                }
+            }, CONNECT_TIMEOUT_MS);
+
+            ws.onopen = () => {
+                clearTimeout(connectTimer);
+                log("connected");
+            };
+
+            ws.onmessage = (event) => log("received: " + event.data);
+            ws.onerror = () => {
+                log("error: browser cannot expose the exact WebSocket network error");
+            };
+            ws.onclose = (event) => {
+                clearTimeout(connectTimer);
+                log("closed: code=" + event.code + " reason=" + (event.reason || "(empty)"));
+            };
+        }
+
+        function reconnect() {
+            if (ws) {
+                ws.close();
+            }
+            connect();
+        }
+
+        function sendTestMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log("not connected");
+                log("diagnosis: send failed because WebSocket is not open");
+                return;
+            }
+
+            ws.send("hello from phone");
+            log("sent: hello from phone");
+        }
+
+        connect();
+    </script>
+</body>
+</html>
+"""
 
 
 def print_python_info():
@@ -35,6 +150,14 @@ def print_python_info():
         print("websockets package: NOT IMPORTABLE")
         print("reason:", exc)
         print("fix: python3 -m pip install websockets")
+
+
+def ensure_html_file():
+    if HTML_FILE.exists():
+        return
+
+    HTML_FILE.write_text(HTML_TEMPLATE, encoding="utf-8")
+    print(f"created missing HTML test page: {HTML_FILE}")
 
 
 def print_startup_diagnostics():
@@ -135,6 +258,7 @@ def start_http_server():
 
 
 async def main():
+    ensure_html_file()
     print_startup_diagnostics()
     http_thread = Thread(target=start_http_server, daemon=True)
     http_thread.start()
