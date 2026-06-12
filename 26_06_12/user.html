@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>로봇 배송</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #111;
+            min-height: 100vh;
+            padding: 12px;
+            padding-bottom: 100px;
+        }
+
+        /* 헤더 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            margin-bottom: 16px;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: #fff;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-dot.connected {
+            background: #22c55e;
+        }
+
+        /* 로봇 상태 카드 */
+        .robot-status-card {
+            background: #111;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+
+        .robot-status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .robot-icon {
+            font-size: 28px;
+        }
+
+        .robot-status-text {
+            text-align: right;
+        }
+
+        .robot-status-label {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        .robot-status-value {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .queue-info {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 10px;
+        }
+
+        .queue-item {
+            text-align: center;
+        }
+
+        .queue-number {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .queue-label {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        /* 지도 컨테이너 */
+        .map-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .map-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .map-container {
+            background: #fafafa;
+            border-radius: 12px;
+            padding: 8px;
+            overflow-x: auto;
+            border: 1px solid #eee;
+        }
+
+        .map-container svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .room {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .room:hover {
+            filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.3));
+        }
+
+        .room.selected {
+            fill: #111 !important;
+            stroke: #111;
+            stroke-width: 4;
+            filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.8));
+            animation: roomPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes roomPulse {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.8)); }
+            50% { filter: drop-shadow(0 0 25px rgba(0, 0, 0, 1)); }
+        }
+
+        .room-yellow {
+            fill: #fff;
+            stroke: #111;
+            stroke-width: 2;
+        }
+
+        .room.selected text {
+            fill: #fff !important;
+        }
+
+        .bc-center {
+            fill: #f0f0f0;
+            stroke: #999;
+            stroke-width: 1;
+        }
+
+        .hallway {
+            fill: #e8e8e8;
+            stroke: #999;
+            stroke-width: 1;
+        }
+
+        .elevator-area {
+            fill: #e0e0e0;
+            stroke: #757575;
+            stroke-width: 1;
+        }
+
+        .stairs {
+            fill: none;
+            stroke: #757575;
+            stroke-width: 1;
+        }
+
+        .robot-marker {
+            transition: all 0.8s ease-in-out;
+        }
+
+        .robot-body {
+            fill: #111;
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        /* 섹션 타이틀 */
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            padding-left: 4px;
+        }
+
+        /* 물품 선택 */
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .item-btn {
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 12px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .item-btn:active:not(.disabled) {
+            transform: scale(0.95);
+        }
+
+        .item-btn.selected {
+            background: #111;
+            border-color: #111;
+            color: #fff;
+        }
+
+        .item-btn.delivered {
+            background: #f0fff0;
+            border-color: #22c55e;
+        }
+
+        .item-btn.delivering {
+            background: #fffbeb;
+            border-color: #f59e0b;
+        }
+
+        .item-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .item-btn .item-icon {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .item-btn .item-name {
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .item-btn .item-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 8px;
+            padding: 2px 5px;
+            border-radius: 8px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .item-btn.delivered .item-badge {
+            background: #22c55e;
+        }
+
+        .item-btn.delivering .item-badge {
+            background: #f59e0b;
+        }
+
+        /* 액션 버튼 영역 */
+        .action-buttons {
+            display: none;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .action-buttons.show {
+            display: flex;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn.retrieve {
+            background: #fff;
+            color: #111;
+            border: 2px solid #111;
+        }
+
+        .action-btn.retrieve.active {
+            background: #111;
+            color: #fff;
+        }
+
+        .action-btn.need {
+            background: #fff;
+            color: #111;
+            border: 2px solid #111;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* 주문 버튼 */
+        .order-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 16px;
+        }
+
+        .order-btn.delivery {
+            background: #111;
+            color: white;
+        }
+
+        .order-btn.retrieve {
+            background: #333;
+            color: white;
+        }
+
+        .order-btn:disabled {
+            background: #ccc;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .order-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        /* 대기열 */
+        .queue-list {
+            background: #fff;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 14px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .queue-list-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .queue-empty {
+            text-align: center;
+            color: #999;
+            padding: 16px;
+            font-size: 13px;
+        }
+
+        .queue-entry {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .queue-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .queue-entry.processing {
+            background: #111;
+            color: #fff;
+        }
+
+        .queue-entry-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .queue-entry-icon {
+            font-size: 18px;
+        }
+
+        .queue-entry-text {
+            font-size: 12px;
+        }
+
+        .queue-entry-status {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .queue-entry-status.waiting {
+            background: #e0e0e0;
+            color: #555;
+        }
+
+        .queue-entry-status.processing {
+            background: #fff;
+            color: #111;
+        }
+
+        /* 알림 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 1000;
+            animation: slideDown 0.3s ease;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .notification.success {
+            background: #111;
+            color: #fff;
+        }
+
+        .notification.error {
+            background: #fff;
+            color: #ef4444;
+            border: 2px solid #ef4444;
+        }
+
+        .notification.info {
+            background: #fff;
+            color: #111;
+            border: 2px solid #111;
+        }
+
+        .notification.announcement {
+            background: #ef4444;
+            color: #fff;
+            border: 3px solid #fff;
+            padding: 20px 30px;
+            font-size: 18px;
+            font-weight: 700;
+            box-shadow: 0 8px 32px rgba(239, 68, 68, 0.5);
+            animation: announcementPop 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes announcementPop {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-50px) scale(0.5);
+            }
+            50% {
+                transform: translateX(-50%) translateY(10px) scale(1.1);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0) scale(1);
+            }
+        }
+
+        /* 완료 목록 */
+        .completed-section {
+            margin-top: 16px;
+        }
+
+        .completed-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .completed-item {
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .completed-item-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #333;
+        }
+
+        .completed-badge {
+            font-size: 9px;
+            padding: 3px 6px;
+            border-radius: 6px;
+            background: #111;
+            color: #fff;
+        }
+
+        /* 하단 버튼 컨테이너 */
+        .bottom-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        /* 디버그 버튼 */
+        .debug-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #111;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #fff;
+        }
+
+        /* IP 변경 버튼 */
+        .ip-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #111;
+            font-size: 18px;
+            cursor: pointer;
+            color: #111;
+        }
+
+        /* IP 모달 */
+        .ip-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ip-modal.show {
+            display: flex;
+        }
+
+        .ip-modal-content {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 320px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .ip-modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .ip-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .ip-label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .ip-input {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .ip-input:focus {
+            border-color: #111;
+        }
+
+        .ip-current {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .ip-modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ip-modal-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .ip-modal-btn.cancel {
+            background: #fff;
+            border: 2px solid #ddd;
+            color: #666;
+        }
+
+        .ip-modal-btn.save {
+            background: #111;
+            border: none;
+            color: #fff;
+        }
+
+        /* 디버그 패널 */
+        .debug-panel {
+            display: none;
+            position: fixed;
+            bottom: 75px;
+            right: 15px;
+            left: 15px;
+            max-height: 50vh;
+            background: #fff;
+            border-radius: 14px;
+            padding: 14px;
+            z-index: 100;
+            overflow-y: auto;
+            border: 2px solid #111;
+        }
+
+        .debug-panel.show {
+            display: block;
+        }
+
+        .debug-content {
+            font-family: monospace;
+            font-size: 10px;
+            white-space: pre-wrap;
+            color: #333;
+        }
+
+        audio {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <div class="header">
+        <h1>🤖 로봇 배송</h1>
+        <div class="connection-status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">연결 중...</span>
+        </div>
+    </div>
+
+    <!-- 로봇 상태 -->
+    <div class="robot-status-card">
+        <div class="robot-status-header">
+            <div class="robot-icon">🤖</div>
+            <div class="robot-status-text">
+                <div class="robot-status-label">로봇 상태</div>
+                <div class="robot-status-value" id="robotStatus">대기 중</div>
+            </div>
+        </div>
+        <div class="queue-info">
+            <div class="queue-item">
+                <div class="queue-number" id="queueCount">0</div>
+                <div class="queue-label">대기</div>
+            </div>
+            <div class="queue-item">
+                <div class="queue-number" id="processingCount">0</div>
+                <div class="queue-label">처리 중</div>
+            </div>
+            <div class="queue-item">
+                <div class="queue-number" id="completedCount">0</div>
+                <div class="queue-label">완료</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 지도 -->
+    <div class="map-card">
+        <div class="map-title">🗺️ 건물 평면도 (방을 클릭하세요)</div>
+        <div class="map-container">
+            <svg id="mapSvg" width="100%" viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet">
+                <!-- 외곽선 -->
+                <rect x="5" y="5" width="390" height="190" fill="none" stroke="#333" stroke-width="2"/>
+                
+                <!-- 방B (왼쪽 위) -->
+                <rect id="roomB" x="15" y="15" width="90" height="65" class="room-yellow room" data-room="B" rx="4"/>
+                <text x="60" y="42" text-anchor="middle" fill="#111" font-size="12" font-weight="bold">방 B</text>
+                <text x="60" y="58" text-anchor="middle" fill="#666" font-size="8">클릭하여 선택</text>
+                
+                <!-- 방B 문 -->
+                <rect x="47" y="80" width="26" height="5" fill="#333" rx="1"/>
+                
+                <!-- 가로 복도 -->
+                <rect x="15" y="85" width="370" height="30" class="hallway"/>
+                <line x1="15" y1="100" x2="385" y2="100" stroke="#ccc" stroke-width="1" stroke-dasharray="5,3"/>
+                <text x="200" y="103" text-anchor="middle" fill="#888" font-size="8">복도</text>
+                
+                <!-- BC랩 (왼쪽 아래) -->
+                <rect x="15" y="120" width="90" height="65" class="bc-center"/>
+                <text x="60" y="150" text-anchor="middle" fill="#333" font-size="11" font-weight="bold">BC랩</text>
+                <text x="60" y="168" text-anchor="middle" fill="#666" font-size="16">🔬</text>
+                
+                <!-- BC랩 문 -->
+                <rect x="47" y="115" width="26" height="5" fill="#333" rx="1"/>
+                
+                <!-- Home (계단 위) -->
+                <rect x="140" y="120" width="45" height="30" fill="#f0f0f0" stroke="#333" stroke-width="1" rx="4"/>
+                <text x="162" y="140" text-anchor="middle" fill="#333" font-size="10" font-weight="bold">Home</text>
+                
+                <!-- 계단 -->
+                <g transform="translate(150, 155)">
+                    <line x1="0" y1="0" x2="25" y2="0" class="stairs"/>
+                    <line x1="0" y1="6" x2="25" y2="6" class="stairs"/>
+                    <line x1="0" y1="12" x2="25" y2="12" class="stairs"/>
+                    <line x1="0" y1="18" x2="25" y2="18" class="stairs"/>
+                    <line x1="0" y1="24" x2="25" y2="24" class="stairs"/>
+                </g>
+                
+                <!-- 엘리베이터 -->
+                <rect x="190" y="140" width="45" height="40" class="elevator-area"/>
+                <text x="212" y="158" text-anchor="middle" fill="#333" font-size="9" font-weight="bold">EV</text>
+                <text x="212" y="173" text-anchor="middle" fill="#666" font-size="12">🛗</text>
+                
+                <!-- 화장실 -->
+                <text x="260" y="158" text-anchor="middle" fill="#888" font-size="8">화장실</text>
+                <text x="260" y="173" text-anchor="middle" fill="#888" font-size="12">🚻</text>
+                
+                <!-- 방A (오른쪽 아래) -->
+                <rect id="roomA" x="295" y="120" width="90" height="65" class="room-yellow room" data-room="A" rx="4"/>
+                <text x="340" y="147" text-anchor="middle" fill="#111" font-size="12" font-weight="bold">방 A</text>
+                <text x="340" y="163" text-anchor="middle" fill="#666" font-size="8">클릭하여 선택</text>
+                
+                <!-- 방A 문 -->
+                <rect x="327" y="115" width="26" height="5" fill="#333" rx="1"/>
+                
+                <!-- 로봇 마커 -->
+                <g id="robotMarker" class="robot-marker">
+                    <circle cx="162" cy="135" r="12" class="robot-body"/>
+                    <text x="162" y="140" text-anchor="middle" fill="white" font-size="12">🤖</text>
+                </g>
+            </svg>
+        </div>
+    </div>
+
+    <!-- 물품 선택 -->
+    <div class="section-title">📦 물품 선택</div>
+    <div class="items-grid" id="itemsGrid"></div>
+
+    <!-- 액션 버튼 영역 -->
+    <div class="action-buttons" id="actionButtons">
+        <button class="action-btn retrieve" onclick="completeItem()">🔄 사용 완료</button>
+        <button class="action-btn need" onclick="needMoreItem()">📢 물품 필요</button>
+    </div>
+
+    <!-- 주문 버튼 -->
+    <button class="order-btn delivery" id="orderBtn" onclick="submitOrder()" disabled>
+        주문하기
+    </button>
+
+    <!-- 대기열 -->
+    <div class="queue-list">
+        <div class="queue-list-title">📋 대기열</div>
+        <div id="queueList">
+            <div class="queue-empty">대기 중인 주문이 없습니다</div>
+        </div>
+    </div>
+
+    <!-- 완료 목록 -->
+    <div class="completed-section">
+        <div class="section-title">✅ 완료된 주문</div>
+        <div class="completed-list" id="completedList"></div>
+    </div>
+
+    <!-- 하단 버튼 -->
+    <div class="bottom-buttons">
+        <button class="ip-btn" onclick="toggleIpModal()">📡</button>
+        <button class="debug-btn" onclick="toggleDebug()">🔍</button>
+    </div>
+
+    <!-- IP 변경 모달 -->
+    <div class="ip-modal" id="ipModal">
+        <div class="ip-modal-content">
+            <div class="ip-modal-title">🔧 서버 IP 설정</div>
+            <div class="ip-current" id="currentIpText">현재: ws://10.59.121.144:3000</div>
+            <div class="ip-input-group">
+                <label class="ip-label">IP 주소</label>
+                <input type="text" class="ip-input" id="ipInput" placeholder="10.59.121.144">
+            </div>
+            <div class="ip-input-group">
+                <label class="ip-label">포트</label>
+                <input type="text" class="ip-input" id="portInput" placeholder="3000">
+            </div>
+            <div class="ip-modal-buttons">
+                <button class="ip-modal-btn cancel" onclick="toggleIpModal()">취소</button>
+                <button class="ip-modal-btn save" onclick="saveIpSettings()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 디버그 패널 -->
+    <div class="debug-panel" id="debugPanel">
+        <div class="debug-content" id="debugContent"></div>
+    </div>
+
+    <audio id="notificationSound" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBT+X2e/GdCcFJ3zJ8NuSOwoVYbXq66lVEw1IoOLyv2wiBECY2vDHdisFKH7L8d2UQQsVY7fr7KpXEw5KouTzwG4jBEKZ2/DIeC0GKoDN8d6VQQsWZbjs7qtZFA9Lo+XzwW8kBUSa3PDJei4GK4HP8+CWQwwXZrnt79xaFRBMpOfzw3ElBUWc3fHLfC8HLILQ9OCXRAwYaLrv8K1bFRFNpujzxHImBUad3vLMfTAHLYPR9OGZRQwZabvv8a5cFRJPp+n0xXMnBkee3/PNfjEIMITT9OKaRg0abLzw8rBdFhJQqOn0xnQoBkif4PPOgDIIMYXU9eObRw0bbr3x87FeFxNRqer1yHUpB0mg4PTOfzMJM4bV9eSdSQ4cc73y9LJgGBRSquz1yXYqB0mh4fTPgDQJNIfW9uSeSg8dcr7z9bNhGRVUq+z2yncsCEqi4vXQgTUKNojX9+WfSw8ec8D09rRiGhZVrO33y3guCUuj4/XRgjYLOInY+OagTBAgdMH19rVjGxdWre74zHotCkuk5PbSgzcLOYrZ+OaiTREgdcL29rdkHBhYru/5zn0uC0yl5vfThDgMOozb+eejThEhdsPz+LhlHRlZr+/6z38wDU2m5/jUhTkNO43c+uekTxIieMT1+LpnHhpasO77AAAABw==" preload="auto"></audio>
+
+    <script>
+        // ===== 설정 =====
+        const DEFAULT_WS_URL = 'ws://10.59.121.144:3000';
+        const LEGACY_WS_URLS = ['ws://localhost:3000', 'ws://192.168.0.90:3000'];
+        const savedWsUrl = localStorage.getItem('WS_URL');
+        let WS_URL = (!savedWsUrl || LEGACY_WS_URLS.includes(savedWsUrl)) ? DEFAULT_WS_URL : savedWsUrl;
+        
+        // ===== 상태 =====
+        let ws = null;
+        let selectedDestination = null;
+        let selectedItem = null;
+        let orderMode = 'delivery';
+        let retrieveItemId = null;
+        
+        let orderQueue = [];
+        let isRobotBusy = false;
+        let currentOrder = null;
+        let queueIdCounter = 1;
+        let completedOrders = [];
+        
+        // 물품 정의
+        const itemCategories = {
+            tools: [
+                {id: 'driver', name: 'Driver', icon: '🪛'},
+                {id: 'block', name: 'Block', icon: '🧱'}
+            ],
+            parts: [
+                {id: 'pen', name: 'Pen', icon: '✏️'},
+                {id: 'wrench', name: 'Hex Wrench', icon: '<svg viewBox="0 0 24 24" width="24" height="24" style="vertical-align:middle;display:inline-block;"><path d="M10 1 L10 18 L16 18 L16 16 L12 16 L12 1 Z" fill="#555" stroke="#333" stroke-width="0.5" transform="rotate(45 12 12)"/></svg>'}
+            ]
+        };
+        
+        // 로봇 위치
+        const roomPositions = {
+            'home': {x: 162, y: 135},
+            'hallway': {x: 200, y: 100},
+            'A': {x: 340, y: 152},
+            'B': {x: 60, y: 47}
+        };
+        
+        // 배송 상태
+        let itemDeliveryStatus = {};
+        ['driver', 'block', 'pen', 'wrench'].forEach(itemId => {
+            itemDeliveryStatus[itemId] = {
+                delivered: false,
+                retrieved: false,
+                retrievePending: false
+            };
+        });
+
+        // ===== 초기화 =====
+        function init() {
+            renderItems();
+            setupMapListeners();
+            connectWebSocket();
+            showNotification('배송 시스템 준비 완료', 'success');
+        }
+
+        function renderItems() {
+            const grid = document.getElementById('itemsGrid');
+            const allItems = [...itemCategories.tools, ...itemCategories.parts];
+            grid.innerHTML = allItems.map(item => `
+                <div class="item-btn" id="item-${item.id}" onclick="selectItem('${item.id}')">
+                    <div class="item-icon">${item.icon}</div>
+                    <div class="item-name">${item.name}</div>
+                </div>
+            `).join('');
+        }
+
+        function setupMapListeners() {
+            document.querySelectorAll('.room').forEach(rect => {
+                rect.addEventListener('click', function() {
+                    const room = this.getAttribute('data-room');
+                    selectDestination(room);
+                });
+            });
+        }
+
+        // ===== WebSocket =====
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').textContent = '연결됨';
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleServerMessage(data);
+                } catch (e) {
+                    console.error('메시지 오류:', e);
+                }
+            };
+
+            ws.onclose = () => {
+                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusText').textContent = '연결 끊김';
+                setTimeout(connectWebSocket, 5000);
+            };
+
+            ws.onerror = () => {
+                document.getElementById('statusText').textContent = '오류';
+            };
+        }
+
+        function handleServerMessage(data) {
+            console.log('📥 서버 메시지:', data);
+            
+            switch(data.type) {
+                case 'robot_update':
+                    handleRobotState(data.data);
+                    break;
+                case 'order_created':
+                    console.log('✅ 주문 생성됨:', data.command);
+                    break;
+                case 'retrieve_created':
+                    console.log('✅ 회수 요청됨:', data.command);
+                    break;
+                case 'error':
+                    showNotification(data.message, 'error');
+                    break;
+            }
+        }
+
+        function handleRobotState(stateData) {
+            const state = (typeof stateData === 'string') ? stateData.trim().toLowerCase() : String(stateData).trim().toLowerCase();
+            
+            if (state === 'finish') {
+                playSound();
+                showNotification('✅ 작업 완료!', 'success');
+                
+                updateRobotMarker('home');
+                
+                if (currentOrder && currentOrder.mode === 'delivery') {
+                    markItemDelivered(currentOrder.item);
+                }
+                
+                if (currentOrder) {
+                    completeCurrentOrder();
+                }
+                
+                setTimeout(() => {
+                    isRobotBusy = false;
+                    processNextOrder();
+                }, 500);
+            }
+        }
+
+        function updateRobotMarker(position) {
+            const marker = document.getElementById('robotMarker');
+            const pos = roomPositions[position];
+            
+            if (pos && marker) {
+                const circle = marker.querySelector('circle');
+                const text = marker.querySelector('text');
+                
+                circle.setAttribute('cx', pos.x);
+                circle.setAttribute('cy', pos.y);
+                text.setAttribute('x', pos.x);
+                text.setAttribute('y', pos.y + 5);
+            }
+        }
+
+        // ===== 선택 =====
+        function selectDestination(room) {
+            // 같은 방을 다시 누르면 선택 취소
+            if (selectedDestination === room) {
+                selectedDestination = null;
+                document.querySelectorAll('.room').forEach(r => {
+                    r.classList.remove('selected');
+                    // 텍스트 색상 복원
+                    const texts = r.parentElement.querySelectorAll(`text`);
+                    texts.forEach(t => {
+                        if (t.previousElementSibling === r || t.closest('svg').querySelector(`[data-room="${r.dataset.room}"]`) === r) {
+                            t.setAttribute('fill', t.dataset.originalFill || '#111');
+                        }
+                    });
+                });
+                updateRoomTextColors();
+                updateOrderButton();
+                return;
+            }
+            
+            selectedDestination = room;
+            
+            document.querySelectorAll('.room').forEach(r => {
+                r.classList.remove('selected');
+            });
+            
+            const roomRect = document.querySelector(`[data-room="${room}"]`);
+            if (roomRect) {
+                roomRect.classList.add('selected');
+            }
+            
+            updateRoomTextColors();
+            updateOrderButton();
+        }
+        
+        function updateRoomTextColors() {
+            // 방 A 텍스트
+            const roomATexts = document.querySelectorAll('#mapSvg text');
+            roomATexts.forEach(text => {
+                const textContent = text.textContent;
+                if (textContent.includes('방 A')) {
+                    text.setAttribute('fill', selectedDestination === 'A' ? '#fff' : '#111');
+                } else if (textContent.includes('방 B')) {
+                    text.setAttribute('fill', selectedDestination === 'B' ? '#fff' : '#111');
+                } else if (textContent === '클릭하여 선택') {
+                    const prevText = text.previousElementSibling;
+                    if (prevText && prevText.textContent.includes('방 A')) {
+                        text.setAttribute('fill', selectedDestination === 'A' ? '#ccc' : '#666');
+                    } else if (prevText && prevText.textContent.includes('방 B')) {
+                        text.setAttribute('fill', selectedDestination === 'B' ? '#ccc' : '#666');
+                    }
+                }
+            });
+        }
+
+        function selectItem(itemId) {
+            const btn = document.getElementById(`item-${itemId}`);
+            if (btn && btn.classList.contains('disabled')) {
+                showNotification('배달 중인 물품입니다', 'error');
+                return;
+            }
+            
+            // 같은 물품을 다시 누르면 선택 취소
+            if (selectedItem === itemId) {
+                selectedItem = null;
+                document.querySelectorAll('.item-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                updateActionButtons();
+                updateOrderButton();
+                return;
+            }
+            
+            selectedItem = itemId;
+            document.querySelectorAll('.item-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.getElementById(`item-${itemId}`).classList.add('selected');
+            
+            updateActionButtons();
+            updateOrderButton();
+        }
+
+        function updateActionButtons() {
+            const actionBtns = document.getElementById('actionButtons');
+            if (selectedItem && itemDeliveryStatus[selectedItem]?.delivered && !itemDeliveryStatus[selectedItem]?.retrieved && !itemDeliveryStatus[selectedItem]?.retrievePending) {
+                actionBtns.classList.add('show');
+            } else {
+                actionBtns.classList.remove('show');
+            }
+        }
+
+        function updateOrderButton() {
+            const btn = document.getElementById('orderBtn');
+            const canOrder = selectedDestination && selectedItem;
+            
+            // 배송 완료된 물품은 배송 모드에서만 비활성화 (회수 모드는 허용)
+            if (orderMode === 'delivery' && selectedItem && itemDeliveryStatus[selectedItem]?.delivered && !itemDeliveryStatus[selectedItem]?.retrieved) {
+                btn.disabled = true;
+                btn.textContent = '📦 주문하기';
+                btn.className = 'order-btn delivery';
+                return;
+            }
+            
+            if (selectedItem) {
+                const itemBtn = document.getElementById(`item-${selectedItem}`);
+                if (itemBtn && itemBtn.classList.contains('disabled')) {
+                    btn.disabled = true;
+                    return;
+                }
+            }
+            
+            btn.disabled = !canOrder;
+            
+            if (orderMode === 'retrieve') {
+                btn.textContent = '🔄 회수하기';
+                btn.className = 'order-btn retrieve';
+            } else {
+                btn.textContent = '📦 주문하기';
+                btn.className = 'order-btn delivery';
+            }
+        }
+
+        // ===== 회수 =====
+        function completeItem() {
+            if (!selectedItem) return;
+            
+            const itemId = selectedItem;
+            
+            if (!itemDeliveryStatus[itemId]?.delivered) {
+                showNotification('배송되지 않은 물품입니다', 'error');
+                return;
+            }
+            
+            if (itemDeliveryStatus[itemId]?.retrieved) {
+                showNotification('이미 회수된 물품입니다', 'error');
+                return;
+            }
+            
+            if (itemDeliveryStatus[itemId]?.retrievePending) {
+                showNotification('이미 회수 요청 중입니다', 'error');
+                return;
+            }
+            
+            if (currentOrder && currentOrder.mode === 'retrieve' && currentOrder.item === itemId) {
+                showNotification('이미 회수가 진행 중입니다', 'error');
+                return;
+            }
+            
+            orderMode = 'retrieve';
+            retrieveItemId = itemId;
+            
+            // 사용완료 버튼 활성화 스타일
+            const retrieveBtn = document.querySelector('.action-btn.retrieve');
+            if (retrieveBtn) {
+                retrieveBtn.classList.add('active');
+            }
+            
+            const itemName = getItemName(itemId);
+            showNotification(`${itemName} 회수: 방을 선택하고 "회수하기"를 클릭하세요`, 'info');
+            updateOrderButton();
+        }
+
+        function needMoreItem() {
+            if (!selectedItem) return;
+            
+            const itemName = getItemName(selectedItem);
+            showNotification(`📢 전체 공지: ${itemName}이(가) 필요합니다!`, 'announcement');
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    action: 'announcement',
+                    type: 'item_needed',
+                    item: selectedItem,
+                    item_name: itemName,
+                    timestamp: Date.now()
+                }));
+            }
+            
+            playSound();
+            setTimeout(() => playSound(), 300);
+        }
+
+        // ===== 주문 =====
+        function submitOrder() {
+            if (!selectedDestination || !selectedItem) return;
+            
+            const itemName = getItemName(selectedItem);
+            
+            if (orderMode === 'retrieve') {
+                if (!itemDeliveryStatus[selectedItem]?.delivered) {
+                    showNotification('배송되지 않은 물품입니다', 'error');
+                    resetSelection();
+                    return;
+                }
+                if (itemDeliveryStatus[selectedItem]?.retrieved) {
+                    showNotification('이미 회수된 물품입니다', 'error');
+                    resetSelection();
+                    return;
+                }
+                
+                const alreadyInQueue = orderQueue.some(order => 
+                    order.mode === 'retrieve' && 
+                    order.item === selectedItem && 
+                    order.status === 'waiting'
+                );
+                
+                if (alreadyInQueue) {
+                    showNotification(`${itemName} 회수가 이미 대기열에 있습니다!`, 'error');
+                    resetSelection();
+                    return;
+                }
+            }
+            
+            const queueItem = {
+                queueId: `Q${queueIdCounter++}`,
+                mode: orderMode,
+                destination: selectedDestination,
+                item: selectedItem,
+                itemName: itemName,
+                itemIcon: getItemIcon(selectedItem),
+                timestamp: Date.now(),
+                status: 'waiting'
+            };
+            
+            orderQueue.push(queueItem);
+            
+            if (orderMode === 'retrieve') {
+                itemDeliveryStatus[selectedItem].retrievePending = true;
+                showNotification(`${itemName} 회수 요청됨`, 'success');
+            } else {
+                showNotification(`${itemName} → 방${selectedDestination} 주문됨`, 'success');
+                updateItemButton(selectedItem, 'delivering');
+            }
+            
+            if (orderMode === 'retrieve') {
+                orderMode = 'delivery';
+                retrieveItemId = null;
+            }
+            
+            resetSelection();
+            updateQueueUI();
+            
+            if (!isRobotBusy) {
+                processNextOrder();
+            }
+        }
+
+        function processNextOrder() {
+            if (orderQueue.length === 0) {
+                isRobotBusy = false;
+                currentOrder = null;
+                document.getElementById('robotStatus').textContent = '대기 중';
+                updateQueueUI();
+                return;
+            }
+            
+            currentOrder = orderQueue.shift();
+            currentOrder.status = 'processing';
+            isRobotBusy = true;
+            
+            document.getElementById('robotStatus').textContent = 
+                `${currentOrder.mode === 'retrieve' ? '회수' : '배송'} 중...`;
+            
+            showNotification(`🚀 ${currentOrder.itemName} ${currentOrder.mode === 'retrieve' ? '회수' : '배송'} 시작`, 'info');
+            
+            updateRobotMarker(currentOrder.destination);
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    action: currentOrder.mode === 'retrieve' ? 'retrieve_item' : 'create_order',
+                    queueId: currentOrder.queueId,
+                    destination: currentOrder.destination,
+                    item: currentOrder.item,
+                    itemName: currentOrder.itemName,
+                    timestamp: currentOrder.timestamp
+                }));
+            }
+            
+            updateQueueUI();
+        }
+
+        function completeCurrentOrder() {
+            if (!currentOrder) return;
+            
+            completedOrders.unshift({
+                ...currentOrder,
+                completedAt: Date.now()
+            });
+            
+            if (currentOrder.mode === 'retrieve') {
+                const itemId = currentOrder.item;
+                if (itemDeliveryStatus[itemId]) {
+                    itemDeliveryStatus[itemId].retrieved = true;
+                    itemDeliveryStatus[itemId].delivered = false;
+                    itemDeliveryStatus[itemId].retrievePending = false;
+                }
+                updateItemButton(itemId, 'normal');
+            }
+            
+            currentOrder = null;
+            updateQueueUI();
+            updateCompletedUI();
+        }
+
+        function markItemDelivered(itemId) {
+            if (!itemDeliveryStatus[itemId]) {
+                itemDeliveryStatus[itemId] = {delivered: false, retrieved: false, retrievePending: false};
+            }
+            
+            itemDeliveryStatus[itemId].delivered = true;
+            itemDeliveryStatus[itemId].retrieved = false;
+            
+            updateItemButton(itemId, 'delivered');
+        }
+
+        // ===== UI 업데이트 =====
+        function updateItemButton(itemId, status) {
+            const btn = document.getElementById(`item-${itemId}`);
+            if (!btn) return;
+            
+            btn.classList.remove('delivered', 'delivering', 'disabled');
+            btn.querySelector('.item-badge')?.remove();
+            
+            if (status === 'delivered') {
+                btn.classList.add('delivered');
+                btn.insertAdjacentHTML('beforeend', '<div class="item-badge">배송됨</div>');
+            } else if (status === 'delivering') {
+                btn.classList.add('delivering', 'disabled');
+                btn.insertAdjacentHTML('beforeend', '<div class="item-badge">배송중</div>');
+            }
+        }
+
+        function updateQueueUI() {
+            document.getElementById('queueCount').textContent = orderQueue.length;
+            document.getElementById('processingCount').textContent = currentOrder ? 1 : 0;
+            document.getElementById('completedCount').textContent = completedOrders.length;
+            
+            const list = document.getElementById('queueList');
+            
+            if (orderQueue.length === 0 && !currentOrder) {
+                list.innerHTML = '<div class="queue-empty">대기 중인 주문이 없습니다</div>';
+                return;
+            }
+            
+            let html = '';
+            
+            if (currentOrder) {
+                html += `
+                    <div class="queue-entry processing">
+                        <div class="queue-entry-info">
+                            <span class="queue-entry-icon">${currentOrder.itemIcon}</span>
+                            <span class="queue-entry-text">${currentOrder.itemName} → 방${currentOrder.destination}</span>
+                        </div>
+                        <span class="queue-entry-status processing">${currentOrder.mode === 'retrieve' ? '회수중' : '배송중'}</span>
+                    </div>
+                `;
+            }
+            
+            orderQueue.forEach(order => {
+                html += `
+                    <div class="queue-entry">
+                        <div class="queue-entry-info">
+                            <span class="queue-entry-icon">${order.itemIcon}</span>
+                            <span class="queue-entry-text">${order.itemName} → 방${order.destination}</span>
+                        </div>
+                        <span class="queue-entry-status waiting">${order.mode === 'retrieve' ? '회수대기' : '대기'}</span>
+                    </div>
+                `;
+            });
+            
+            list.innerHTML = html;
+        }
+
+        function updateCompletedUI() {
+            const list = document.getElementById('completedList');
+            
+            if (completedOrders.length === 0) {
+                list.innerHTML = '';
+                return;
+            }
+            
+            list.innerHTML = completedOrders.slice(0, 5).map(order => `
+                <div class="completed-item">
+                    <div class="completed-item-info">
+                        <span>${order.itemIcon}</span>
+                        <span>${order.itemName} → 방${order.destination}</span>
+                    </div>
+                    <span class="completed-badge">${order.mode === 'retrieve' ? '회수' : '배송'}</span>
+                </div>
+            `).join('');
+        }
+
+        function resetSelection() {
+            selectedDestination = null;
+            selectedItem = null;
+            
+            document.querySelectorAll('.room').forEach(r => {
+                r.classList.remove('selected');
+            });
+            
+            document.querySelectorAll('.item-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // 사용완료 버튼 스타일 초기화
+            const retrieveBtn = document.querySelector('.action-btn.retrieve');
+            if (retrieveBtn) {
+                retrieveBtn.classList.remove('active');
+            }
+            
+            document.getElementById('actionButtons').classList.remove('show');
+            updateRoomTextColors();
+            updateOrderButton();
+        }
+
+        // ===== 유틸 =====
+        function getItemName(itemId) {
+            for (let category in itemCategories) {
+                const item = itemCategories[category].find(i => i.id === itemId);
+                if (item) return item.name;
+            }
+            return itemId;
+        }
+
+        function getItemIcon(itemId) {
+            for (let category in itemCategories) {
+                const item = itemCategories[category].find(i => i.id === itemId);
+                if (item) return item.icon;
+            }
+            return '📦';
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            const duration = type === 'announcement' ? 5000 : 2500;
+            setTimeout(() => notification.remove(), duration);
+        }
+
+        function playSound() {
+            document.getElementById('notificationSound').play().catch(() => {});
+        }
+
+        // ===== IP 설정 =====
+        function toggleIpModal() {
+            const modal = document.getElementById('ipModal');
+            modal.classList.toggle('show');
+            
+            if (modal.classList.contains('show')) {
+                // 현재 IP와 포트 파싱
+                const match = WS_URL.match(/ws:\/\/([^:]+):(\d+)/);
+                if (match) {
+                    document.getElementById('ipInput').value = match[1];
+                    document.getElementById('portInput').value = match[2];
+                }
+                document.getElementById('currentIpText').textContent = `현재: ${WS_URL}`;
+            }
+        }
+
+        function saveIpSettings() {
+            const ip = document.getElementById('ipInput').value.trim();
+            const port = document.getElementById('portInput').value.trim();
+            
+            if (!ip || !port) {
+                showNotification('IP와 포트를 입력하세요', 'error');
+                return;
+            }
+            
+            // IP 형식 간단 체크
+            if (!/^[\d\.]+$/.test(ip) && !/^[a-zA-Z0-9\-\.]+$/.test(ip)) {
+                showNotification('올바른 IP 주소를 입력하세요', 'error');
+                return;
+            }
+            
+            if (!/^\d+$/.test(port) || parseInt(port) < 1 || parseInt(port) > 65535) {
+                showNotification('올바른 포트 번호를 입력하세요 (1-65535)', 'error');
+                return;
+            }
+            
+            // 새 URL 생성 및 저장
+            const newUrl = `ws://${ip}:${port}`;
+            WS_URL = newUrl;
+            localStorage.setItem('WS_URL', newUrl);
+            
+            // 모달 닫기
+            toggleIpModal();
+            
+            // WebSocket 재연결
+            if (ws) {
+                ws.close();
+            }
+            
+            showNotification(`서버 변경: ${ip}:${port}`, 'success');
+            
+            // 1초 후 재연결
+            setTimeout(() => {
+                connectWebSocket();
+            }, 1000);
+        }
+
+        function toggleDebug() {
+            const panel = document.getElementById('debugPanel');
+            panel.classList.toggle('show');
+            
+            if (panel.classList.contains('show')) {
+                let info = '=== 배송 상태 ===\n\n';
+                
+                for (let itemId in itemDeliveryStatus) {
+                    const status = itemDeliveryStatus[itemId];
+                    info += `${getItemName(itemId)}:\n`;
+                    info += `  delivered: ${status.delivered}\n`;
+                    info += `  retrieved: ${status.retrieved}\n`;
+                    info += `  retrievePending: ${status.retrievePending}\n\n`;
+                }
+                
+                info += '=== 연결 상태 ===\n\n';
+                info += `WebSocket: ${ws ? ['연결중', '연결됨', '닫는중', '닫힘'][ws.readyState] : 'null'}\n`;
+                info += `URL: ${WS_URL}\n\n`;
+                
+                info += '=== Queue 상태 ===\n\n';
+                info += `대기: ${orderQueue.length}건\n`;
+                info += `처리중: ${currentOrder ? currentOrder.queueId : '없음'}\n`;
+                info += `로봇: ${isRobotBusy ? '바쁨' : '대기'}\n`;
+                
+                document.getElementById('debugContent').textContent = info;
+            }
+        }
+
+        // 시작
+        window.onload = init;
+    </script>
+</body>
+</html>
