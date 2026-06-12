@@ -2,7 +2,6 @@
 
 import sys
 sys.path.append('/home/jetson/mp_env/lib/python3.8/site-packages')
-import json
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Int32
@@ -15,10 +14,6 @@ import numpy as np
 class HandTrackerNode(Node):
     def __init__(self):
         super().__init__('hand_tracker_node_lambda')
-        self.declare_parameter(
-            'motion_map_json',
-            '{"block": 1, "wrench": 2, "driver": 3, "pen": 4}'
-        )
         self.declare_parameter('thumbs_up_required_count', 5)
         self.declare_parameter('show_debug_window', True)
 
@@ -52,11 +47,12 @@ class HandTrackerNode(Node):
             min_tracking_confidence=0.5
         )
         self.mediapipe_start = False
-        self.motion_map = json.loads(
-            self.get_parameter(
-                'motion_map_json'
-            ).get_parameter_value().string_value
-        )
+        self.motion_map = {
+            'driver': 3,
+            'pen': 4,
+            'block': 1,
+            'wrench': 2,
+        }
         self.items = list(self.motion_map.keys())
         self.item = None
         self.lambda_sign_count = 0
